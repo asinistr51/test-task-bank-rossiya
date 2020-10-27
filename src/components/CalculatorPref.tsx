@@ -1,5 +1,4 @@
 import React from 'react';
-import { v4 } from 'uuid';
 
 import FormControl from '@material-ui/core/FormControl';
 import InputLabel from '@material-ui/core/InputLabel';
@@ -39,20 +38,26 @@ export const CalculatorPref: React.FC<CalculatorPrefProps> = ({
     } else {
       setCodeIndex(NaN)
     }
-    
+
   }, [formValues.code, properties, formValues]);
 
   React.useEffect(() => {
       setPeriodIndex(findIndexInDepositsParams(properties, formValues.period, formValues.code));
 
   }, [formValues.period, properties, formValues]);
-  const handleClickOpenModal = (): void => {
-    setVisible(true);
-  };
 
-  const handleClickCloseModal = (): void => {
+  const handleClickOpenModal = React.useCallback((): void => {
+    setVisible(true);
+  }, [setVisible])
+
+  const handleClickCloseModal = React.useCallback((): void => {
     setVisible(false);
-  };
+  }, [setVisible])
+
+  const handleClickButton = React.useCallback(() => {
+    setDepositOffer(calculator(formValues, properties));
+    handleClickOpenModal();
+  }, [handleClickOpenModal, formValues, properties])
 
   return (
     <>
@@ -69,8 +74,8 @@ export const CalculatorPref: React.FC<CalculatorPrefProps> = ({
           <MenuItem value="">
             <em>Не выбран</em>
           </MenuItem>
-          {properties.deposits.map((el: DepositItem) => (
-            <MenuItem key={v4()} value={el.code}>
+          {properties.deposits.map((el: DepositItem, index) => (
+            <MenuItem key={index} value={el.code}>
               {el.name}
             </MenuItem>
           ))}
@@ -93,19 +98,16 @@ export const CalculatorPref: React.FC<CalculatorPrefProps> = ({
         name="summ"
         type="number"
         label="Сумма"
-        disabled={isNaN(codeIndex) ? true : +formValues.period < properties.deposits[codeIndex]?.param[0].period_from}
-        error={isNaN(periodIndex) ? true :+formValues.summ < properties.deposits[codeIndex]?.param[periodIndex]?.summs_and_rate[0].summ_from}
-        helperText={formValues.period ? `Минимальная сумма: ${properties.deposits[codeIndex]?.param[periodIndex]?.summs_and_rate[0].summ_from}` : `Укажите срок`}
+        disabled={isNaN(codeIndex) && !properties.deposits[codeIndex]?.param[periodIndex]?.summs_and_rate[0] ? true : +formValues.period < properties.deposits[codeIndex]?.param[0].period_from}
+        error={isNaN(periodIndex) || !properties.deposits[codeIndex]?.param[periodIndex]?.summs_and_rate[0] ? true :+formValues.summ < properties.deposits[codeIndex]?.param[periodIndex]?.summs_and_rate[0].summ_from}
+        helperText={formValues.period && properties.deposits[codeIndex]?.param[periodIndex]?.summs_and_rate[0] ? `Минимальная сумма: ${properties.deposits[codeIndex]?.param[periodIndex]?.summs_and_rate[0].summ_from}` : `Укажите срок`}
         variant="outlined"
         value={formValues.summ}
         onChange={setFormValues}
       />
       <Button
         className="input-section"
-        onClick={() => {
-          setDepositOffer(calculator(formValues, properties));
-          handleClickOpenModal();
-        }}
+        onClick={handleClickButton}
         variant="contained"
         color="primary"
         disabled={isNaN(periodIndex) ? true :+formValues.summ < properties.deposits[codeIndex]?.param[periodIndex]?.summs_and_rate[0].summ_from}
